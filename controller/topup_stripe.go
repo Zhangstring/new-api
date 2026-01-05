@@ -19,6 +19,7 @@ import (
 	"github.com/stripe/stripe-go/v81"
 	"github.com/stripe/stripe-go/v81/checkout/session"
 	"github.com/stripe/stripe-go/v81/webhook"
+	"github.com/shopspring/decimal"
 	"github.com/thanhpk/randstr"
 )
 
@@ -76,7 +77,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	reference := fmt.Sprintf("new-api-ref-%d-%d-%s", user.Id, time.Now().UnixMilli(), randstr.String(4))
 	referenceId := "ref_" + common.Sha1([]byte(reference))
 
-	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount)
+	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, user.Group)
 	if err != nil {
 		log.Println("获取Stripe Checkout支付链接失败", err)
 		c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
@@ -210,25 +211,44 @@ func sessionExpired(event stripe.Event) {
 	log.Println("充值订单已过期", referenceId)
 }
 
-func genStripeLink(referenceId string, customerId string, email string, amount int64) (string, error) {
+func genStripeLink(referenceId string, customerId string, email string, amount int64, group string) (string, error) {
 	if !strings.HasPrefix(setting.StripeApiSecret, "sk_") && !strings.HasPrefix(setting.StripeApiSecret, "rk_") {
 		return "", fmt.Errorf("无效的Stripe API密钥")
 	}
 
 	stripe.Key = setting.StripeApiSecret
 
+	topupGroupRatio := common.GetTopupGroupRatio(group)
+	if topupGroupRatio == 0 {
+		topupGroupRatio = 1
+	}
+	discount := 1.0
+	if ds, ok := operation_setting.GetPaymentSetting().AmountDiscount[int(amount)]; ok {
+		if ds > 0 {
+			discount = ds
+		}
+	}
+
+	// 通过调整数量来实现折扣后的价格
+	// 例如：500额度 * 0.88折扣 = 440，传给Stripe数量440，单价0.01，总价4.4元
+	finalQuantity := decimal.NewFromInt(amount).Mul(decimal.NewFromFloat(topupGroupRatio)).Mul(decimal.NewFromFloat(discount)).Round(0).IntPart()
+	if finalQuantity <= 0 {
+		return "", fmt.Errorf("无效的Stripe支付数量")
+	}
+
 	params := &stripe.CheckoutSessionParams{
 		ClientReferenceID: stripe.String(referenceId),
 		SuccessURL:        stripe.String(system_setting.ServerAddress + "/console/log"),
 		CancelURL:         stripe.String(system_setting.ServerAddress + "/console/topup"),
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				Price:    stripe.String(setting.StripePriceId),
-				Quantity: stripe.Int64(amount),
-			},
-		},
 		Mode:                stripe.String(string(stripe.CheckoutSessionModePayment)),
 		AllowPromotionCodes: stripe.Bool(setting.StripePromotionCodesEnabled),
+	}
+
+	params.LineItems = []*stripe.CheckoutSessionLineItemParams{
+		{
+			Price:    stripe.String(setting.StripePriceId),
+			Quantity: stripe.Int64(finalQuantity),
+		},
 	}
 
 	if "" == customerId {
