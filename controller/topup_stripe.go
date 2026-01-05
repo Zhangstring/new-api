@@ -65,8 +65,8 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		c.JSON(200, gin.H{"message": fmt.Sprintf("充值数量不能小于 %d", getStripeMinTopup()), "data": 10})
 		return
 	}
-	if req.Amount > 10000 {
-		c.JSON(200, gin.H{"message": "充值数量不能大于 10000", "data": 10})
+	if req.Amount > 100000 {
+		c.JSON(200, gin.H{"message": "充值数量不能大于 100000", "data": 10})
 		return
 	}
 
