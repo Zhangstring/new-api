@@ -323,8 +323,8 @@ func shouldRetry(c *gin.Context, openaiErr *types.NewAPIError, retryTimes int) b
 		return true
 	}
 	if openaiErr.StatusCode/100 == 5 {
-		// 超时不重试
-		if openaiErr.StatusCode == 504 || openaiErr.StatusCode == 524 {
+		// 只排除 524 (Cloudflare 超时)，允许 504 重试
+		if openaiErr.StatusCode == 524 {
 			return false
 		}
 		return true
@@ -535,8 +535,8 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return true
 	}
 	if taskErr.StatusCode/100 == 5 {
-		// 超时不重试
-		if taskErr.StatusCode == 504 || taskErr.StatusCode == 524 {
+		// 只排除 524 (Cloudflare 超时)，允许 504 重试
+		if taskErr.StatusCode == 524 {
 			return false
 		}
 		return true
