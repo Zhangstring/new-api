@@ -20,8 +20,9 @@ func GetCheckinStatus(c *gin.Context) {
 		return
 	}
 	userId := c.GetInt("id")
-	// 获取月份参数，默认为当前月份
-	month := c.DefaultQuery("month", time.Now().Format("2006-01"))
+	// 获取月份参数，默认为北京时间当月
+	currentMonth := time.Now().In(model.GetCheckinTimezone()).Format("2006-01")
+	month := c.DefaultQuery("month", currentMonth)
 
 	stats, err := model.GetUserCheckinStats(userId, month)
 	if err != nil {
@@ -32,13 +33,18 @@ func GetCheckinStatus(c *gin.Context) {
 		return
 	}
 
+	// 获取昨日使用量（用于前端展示签到条件）
+	yesterdayUsage, _ := model.GetUserYesterdayUsage(userId)
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"enabled":   setting.Enabled,
-			"min_quota": setting.MinQuota,
-			"max_quota": setting.MaxQuota,
-			"stats":     stats,
+			"enabled":         setting.Enabled,
+			"min_quota":       setting.MinQuota,
+			"max_quota":       setting.MaxQuota,
+			"min_usage_quota": setting.MinUsageQuota, // 前一天最低使用额度要求
+			"yesterday_usage": yesterdayUsage,        // 昨日实际使用额度
+			"stats":           stats,
 		},
 	})
 }

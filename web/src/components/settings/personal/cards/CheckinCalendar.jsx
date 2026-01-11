@@ -46,6 +46,8 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
   const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
   const [checkinData, setCheckinData] = useState({
     enabled: false,
+    min_usage_quota: 0,
+    yesterday_usage: 0,
     stats: {
       checked_in_today: false,
       total_checkins: 0,
@@ -81,6 +83,19 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
     );
   }, [checkinData.stats?.records]);
 
+  const minUsageQuota = useMemo(
+    () => checkinData.min_usage_quota || 0,
+    [checkinData.min_usage_quota],
+  );
+  const yesterdayUsage = useMemo(
+    () => checkinData.yesterday_usage || 0,
+    [checkinData.yesterday_usage],
+  );
+  const usageRequirementMet = useMemo(() => {
+    if (minUsageQuota <= 0) return true;
+    return yesterdayUsage >= minUsageQuota;
+  }, [minUsageQuota, yesterdayUsage]);
+
   // 获取签到状态
   const fetchCheckinStatus = async (month) => {
     const isFirstLoad = !initialLoaded;
@@ -89,7 +104,11 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
       const res = await API.get(`/api/user/checkin?month=${month}`);
       const { success, data, message } = res.data;
       if (success) {
-        setCheckinData(data);
+        setCheckinData({
+          ...data,
+          min_usage_quota: data.min_usage_quota || 0,
+          yesterday_usage: data.yesterday_usage || 0,
+        });
         // 首次加载时，根据签到状态设置折叠状态
         if (isFirstLoad) {
           setIsCollapsed(data.stats?.checked_in_today ?? false);
@@ -275,7 +294,11 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
           icon={<Gift size={16} />}
           onClick={() => doCheckin()}
           loading={checkinLoading || !initialLoaded}
-          disabled={!initialLoaded || checkinData.stats?.checked_in_today}
+          disabled={
+            !initialLoaded ||
+            checkinData.stats?.checked_in_today ||
+            !usageRequirementMet
+          }
           className='!bg-green-600 hover:!bg-green-700'
         >
           {!initialLoaded
@@ -285,6 +308,23 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
               : t('立即签到')}
         </Button>
       </div>
+      {minUsageQuota > 0 && (
+        <div className='mt-2 rounded-lg bg-slate-50 dark:bg-slate-800 p-2 text-xs text-gray-600 dark:text-gray-300'>
+          <div className='flex flex-wrap gap-3'>
+            <span>
+              {t('昨日使用量')}：{renderQuota(yesterdayUsage, 6)}
+            </span>
+            <span>
+              {t('签到所需最低使用量')}：{renderQuota(minUsageQuota, 6)}
+            </span>
+          </div>
+          {!usageRequirementMet && (
+            <Typography.Text type='danger' className='text-xs mt-1 block'>
+              {t('昨日使用量未达标，暂无法签到')}
+            </Typography.Text>
+          )}
+        </div>
+      )}
 
       {/* 可折叠内容 */}
       <Collapsible isOpen={isCollapsed === false} keepDOM>

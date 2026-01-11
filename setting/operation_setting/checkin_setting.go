@@ -4,9 +4,10 @@ import "github.com/QuantumNous/new-api/setting/config"
 
 // CheckinSetting 签到功能配置
 type CheckinSetting struct {
-	Enabled  bool `json:"enabled"`   // 是否启用签到功能
-	MinQuota int  `json:"min_quota"` // 签到最小额度奖励
-	MaxQuota int  `json:"max_quota"` // 签到最大额度奖励
+	Enabled       bool `json:"enabled"`         // 是否启用签到功能
+	MinQuota      int  `json:"min_quota"`       // 签到最小额度奖励
+	MaxQuota      int  `json:"max_quota"`       // 签到最大额度奖励
+	MinUsageQuota int  `json:"min_usage_quota"` // 前一天最低使用额度要求（0表示不限制）
 }
 
 // 默认配置

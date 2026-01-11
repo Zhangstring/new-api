@@ -35,6 +35,7 @@ export default function SettingsCheckin(props) {
     'checkin_setting.enabled': false,
     'checkin_setting.min_quota': 1000,
     'checkin_setting.max_quota': 10000,
+    'checkin_setting.min_usage_quota': 0, // 前一天最低使用额度要求
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
@@ -81,9 +82,16 @@ export default function SettingsCheckin(props) {
   }
 
   useEffect(() => {
-    const currentInputs = {};
+    // 使用默认值作为基础，然后用 props.options 中的值覆盖
+    const defaultInputs = {
+      'checkin_setting.enabled': false,
+      'checkin_setting.min_quota': 1000,
+      'checkin_setting.max_quota': 10000,
+      'checkin_setting.min_usage_quota': 0,
+    };
+    const currentInputs = { ...defaultInputs };
     for (let key in props.options) {
-      if (Object.keys(inputs).includes(key)) {
+      if (Object.keys(defaultInputs).includes(key)) {
         currentInputs[key] = props.options[key];
       }
     }
@@ -134,6 +142,16 @@ export default function SettingsCheckin(props) {
                   label={t('签到最大额度')}
                   placeholder={t('签到奖励的最大额度')}
                   onChange={handleFieldChange('checkin_setting.max_quota')}
+                  min={0}
+                  disabled={!inputs['checkin_setting.enabled']}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.InputNumber
+                  field={'checkin_setting.min_usage_quota'}
+                  label={t('签到所需昨日使用量')}
+                  placeholder={t('0表示不限制')}
+                  onChange={handleFieldChange('checkin_setting.min_usage_quota')}
                   min={0}
                   disabled={!inputs['checkin_setting.enabled']}
                 />
