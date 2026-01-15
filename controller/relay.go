@@ -216,6 +216,12 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 		processChannelError(c, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(c, constant.ContextKeyChannelKey), channel.GetAutoBan()), newAPIError)
 
+		// 流式请求已开始发送响应后不重试，避免客户端收到混乱数据
+		if relayInfo.IsStream && relayInfo.HasSendResponse() {
+			logger.LogInfo(c, "流式请求已开始响应，不进行重试")
+			break
+		}
+
 		if !shouldRetry(c, newAPIError, common.RetryTimes-retryParam.GetRetry()) {
 			break
 		}
