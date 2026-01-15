@@ -2583,6 +2583,7 @@
     "签到最大额度": "Maximum check-in quota",
     "签到奖励的最大额度": "Maximum quota for check-in rewards",
     "保存签到设置": "Save check-in settings",
+    "今日使用量": "Today's usage",
     "昨日使用量": "Yesterday's usage",
     "签到所需最低使用量": "Minimum usage required for check-in",
     "昨日使用量未达标，暂无法签到": "Usage requirement not met, please use more quota before checking in",

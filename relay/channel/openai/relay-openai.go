@@ -222,6 +222,8 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 
 	err = common.Unmarshal(responseBody, &simpleResponse)
 	if err != nil {
+		// 记录原始响应体，方便排查上游返回了什么（截断以避免日志过大）
+		logger.LogError(c, fmt.Sprintf("failed to unmarshal response, raw body: %s", common.TruncateBytesForLog(responseBody)))
 		return nil, types.NewOpenAIError(err, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
 	}
 

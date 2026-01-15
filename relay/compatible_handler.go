@@ -182,7 +182,8 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		return newApiErr
 	}
 
-	var containAudioTokens = usage.(*dto.Usage).CompletionTokenDetails.AudioTokens > 0 || usage.(*dto.Usage).PromptTokensDetails.AudioTokens > 0
+	usageData := usage.(*dto.Usage)
+	var containAudioTokens = usageData.CompletionTokenDetails.AudioTokens > 0 || usageData.PromptTokensDetails.AudioTokens > 0
 	var containsAudioRatios = ratio_setting.ContainsAudioRatio(info.OriginModelName) || ratio_setting.ContainsAudioCompletionRatio(info.OriginModelName)
 
 	if containAudioTokens && containsAudioRatios {
@@ -369,18 +370,18 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 	}
 
 	quota := int(quotaCalculateDecimal.Round(0).IntPart())
-	totalTokens := promptTokens + completionTokens
 
 	//var logContent string
 
 	// record all the consume log even if quota is 0
-	if totalTokens == 0 {
+	// 修改：输出低于阈值视为空回，不扣费（有输入但无/极少输出的情况）
+	if completionTokens < common.EmptyResponseThreshold {
 		// in this case, must be some error happened
 		// we cannot just return, because we may have to return the pre-consumed quota
 		quota = 0
-		extraContent = append(extraContent, "上游没有返回计费信息，无法扣费（可能是上游超时）")
-		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, "+
-			"tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, modelName, relayInfo.FinalPreConsumedQuota))
+		extraContent = append(extraContent, fmt.Sprintf("上游返回近空响应（输出 %d < %d），不扣费", completionTokens, common.EmptyResponseThreshold))
+		logger.LogWarn(ctx, fmt.Sprintf("completion tokens %d < %d, not consuming quota, userId %d, channelId %d, "+
+			"tokenId %d, model %s, prompt tokens %d, pre-consumed quota %d", completionTokens, common.EmptyResponseThreshold, relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, modelName, promptTokens, relayInfo.FinalPreConsumedQuota))
 	} else {
 		if !ratio.IsZero() && quota == 0 {
 			quota = 1

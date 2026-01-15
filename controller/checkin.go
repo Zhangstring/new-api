@@ -33,8 +33,9 @@ func GetCheckinStatus(c *gin.Context) {
 		return
 	}
 
-	// 获取昨日使用量（用于前端展示签到条件）
+	// 获取昨日和今日使用量（用于前端展示签到条件）
 	yesterdayUsage, _ := model.GetUserYesterdayUsage(userId)
+	todayUsage, _ := model.GetUserTodayUsage(userId)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -44,6 +45,7 @@ func GetCheckinStatus(c *gin.Context) {
 			"max_quota":       setting.MaxQuota,
 			"min_usage_quota": setting.MinUsageQuota, // 前一天最低使用额度要求
 			"yesterday_usage": yesterdayUsage,        // 昨日实际使用额度
+			"today_usage":     todayUsage,            // 今日实际使用额度
 			"stats":           stats,
 		},
 	})

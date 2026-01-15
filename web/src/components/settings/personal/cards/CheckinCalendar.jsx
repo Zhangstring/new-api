@@ -48,6 +48,7 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
     enabled: false,
     min_usage_quota: 0,
     yesterday_usage: 0,
+    today_usage: 0,
     stats: {
       checked_in_today: false,
       total_checkins: 0,
@@ -56,6 +57,25 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
       records: [],
     },
   });
+
+  // 格式化额度显示，去掉多余的0
+  const formatQuota = (quota) => {
+    const result = renderQuota(quota, 6);
+    // TOKENS 模式直接返回，不做去0处理（因为返回的是 1.0k/1.0M 格式）
+    if (typeof result === 'number' || /[kMB]$/.test(result)) {
+      return result;
+    }
+    // 提取符号和数字部分，去掉尾部多余的0
+    const match = result.match(/^([^\d]*)(.*)$/);
+    if (match) {
+      const symbol = match[1];
+      const numStr = match[2];
+      // 去掉尾部的0和多余的小数点
+      const cleanNum = parseFloat(numStr).toString();
+      return symbol + cleanNum;
+    }
+    return result;
+  };
   const [currentMonth, setCurrentMonth] = useState(
     new Date().toISOString().slice(0, 7),
   );
@@ -91,6 +111,10 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
     () => checkinData.yesterday_usage || 0,
     [checkinData.yesterday_usage],
   );
+  const todayUsage = useMemo(
+    () => checkinData.today_usage || 0,
+    [checkinData.today_usage],
+  );
   const usageRequirementMet = useMemo(() => {
     if (minUsageQuota <= 0) return true;
     return yesterdayUsage >= minUsageQuota;
@@ -108,6 +132,7 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
           ...data,
           min_usage_quota: data.min_usage_quota || 0,
           yesterday_usage: data.yesterday_usage || 0,
+          today_usage: data.today_usage || 0,
         });
         // 首次加载时，根据签到状态设置折叠状态
         if (isFirstLoad) {
@@ -312,10 +337,13 @@ const CheckinCalendar = ({ t, status, turnstileEnabled, turnstileSiteKey }) => {
         <div className='mt-2 rounded-lg bg-slate-50 dark:bg-slate-800 p-2 text-xs text-gray-600 dark:text-gray-300'>
           <div className='flex flex-wrap gap-3'>
             <span>
-              {t('昨日使用量')}：{renderQuota(yesterdayUsage, 6)}
+              {t('今日使用量')}：{formatQuota(todayUsage)}
             </span>
             <span>
-              {t('签到所需最低使用量')}：{renderQuota(minUsageQuota, 6)}
+              {t('昨日使用量')}：{formatQuota(yesterdayUsage)}
+            </span>
+            <span>
+              {t('签到所需最低使用量')}：{formatQuota(minUsageQuota)}
             </span>
           </div>
           {!usageRequirementMet && (

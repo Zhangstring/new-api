@@ -161,6 +161,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		return newAPIError
 	}
 
-	service.PostClaudeConsumeQuota(c, info, usage.(*dto.Usage))
+	usageData := usage.(*dto.Usage)
+	service.PostClaudeConsumeQuota(c, info, usageData)
 	return nil
 }

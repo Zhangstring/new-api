@@ -52,6 +52,10 @@ func ShouldDisableChannel(channelType int, err *types.NewAPIError) bool {
 		return false
 	}
 	if types.IsChannelError(err) {
+		// 空响应不禁用渠道（可能是临时问题）
+		if err.GetErrorCode() == types.ErrorCodeChannelEmptyResponse {
+			return false
+		}
 		return true
 	}
 	if types.IsSkipRetryError(err) {

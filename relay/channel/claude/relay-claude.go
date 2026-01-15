@@ -638,7 +638,8 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 	var claudeResponse dto.ClaudeResponse
 	err := common.UnmarshalJsonStr(data, &claudeResponse)
 	if err != nil {
-		common.SysLog("error unmarshalling stream response: " + err.Error())
+		// 记录原始响应数据，方便排查上游返回了什么（截断以避免日志过大）
+		logger.LogError(c, fmt.Sprintf("failed to unmarshal claude stream response, raw data: %s", common.TruncateForLog(data)))
 		return types.NewError(err, types.ErrorCodeBadResponseBody)
 	}
 	if claudeError := claudeResponse.GetClaudeError(); claudeError != nil && claudeError.Type != "" {
@@ -730,6 +731,8 @@ func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 	var claudeResponse dto.ClaudeResponse
 	err := common.Unmarshal(data, &claudeResponse)
 	if err != nil {
+		// 记录原始响应体，方便排查上游返回了什么（截断以避免日志过大）
+		logger.LogError(c, fmt.Sprintf("failed to unmarshal claude response, raw body: %s", common.TruncateBytesForLog(data)))
 		return types.NewError(err, types.ErrorCodeBadResponseBody)
 	}
 	if claudeError := claudeResponse.GetClaudeError(); claudeError != nil && claudeError.Type != "" {

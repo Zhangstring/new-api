@@ -334,3 +334,22 @@ func BuildURL(base string, endpoint string) string {
 	}
 	return u.ResolveReference(ref).String()
 }
+
+// EmptyResponseThreshold 输出 token 小于此值视为空回
+const EmptyResponseThreshold = 10
+
+// MaxLogBodySize 日志记录响应体的最大长度
+const MaxLogBodySize = 1024
+
+// TruncateForLog 截断字符串用于日志记录，避免记录过大的响应体
+func TruncateForLog(data string) string {
+	if len(data) <= MaxLogBodySize {
+		return data
+	}
+	return data[:MaxLogBodySize] + fmt.Sprintf("... (truncated, total %d bytes)", len(data))
+}
+
+// TruncateBytesForLog 截断字节数组用于日志记录
+func TruncateBytesForLog(data []byte) string {
+	return TruncateForLog(string(data))
+}

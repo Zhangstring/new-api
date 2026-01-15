@@ -42,6 +42,21 @@ func GetUserYesterdayUsage(userId int) (int64, error) {
 	return totalQuota, err
 }
 
+// GetUserTodayUsage 获取用户今天的使用额度（基于中国时区）
+func GetUserTodayUsage(userId int) (int64, error) {
+	now := getCheckinNow()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, chinaTimezone)
+
+	var totalQuota int64
+	err := LOG_DB.Table("logs").
+		Where("user_id = ? AND created_at >= ?",
+			userId, startOfToday.Unix()).
+		Select("COALESCE(SUM(quota), 0)").
+		Scan(&totalQuota).Error
+
+	return totalQuota, err
+}
+
 // CheckYesterdayUsageForCheckin 检查用户昨日使用量是否满足签到条件
 // 返回值: (是否满足条件, 昨日使用量, 错误)
 func CheckYesterdayUsageForCheckin(userId int) (bool, int64, error) {
