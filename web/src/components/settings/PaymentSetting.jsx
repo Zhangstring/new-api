@@ -40,6 +40,7 @@ const PaymentSetting = () => {
     PayMethods: '',
     AmountOptions: '',
     AmountDiscount: '',
+    AmountBonus: '',
 
     StripeApiSecret: '',
     StripeWebhookSecret: '',
@@ -92,6 +93,18 @@ const PaymentSetting = () => {
             } catch (error) {
               console.error('解析AmountDiscount出错:', error);
               newInputs['AmountDiscount'] = item.value;
+            }
+            break;
+          case 'payment_setting.amount_bonus':
+            try {
+              newInputs['AmountBonus'] = JSON.stringify(
+                JSON.parse(item.value),
+                null,
+                2,
+              );
+            } catch (error) {
+              console.error('解析AmountBonus出错:', error);
+              newInputs['AmountBonus'] = item.value;
             }
             break;
           case 'Price':

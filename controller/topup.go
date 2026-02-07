@@ -58,6 +58,7 @@ func GetTopUpInfo(c *gin.Context) {
 		"stripe_min_topup":    setting.StripeMinTopUp,
 		"amount_options":      operation_setting.GetPaymentSetting().AmountOptions,
 		"discount":            operation_setting.GetPaymentSetting().AmountDiscount,
+		"bonus":               operation_setting.GetPaymentSetting().AmountBonus,
 	}
 	common.ApiSuccess(c, data)
 }
@@ -299,13 +300,24 @@ func EpayNotify(c *gin.Context) {
 			dAmount := decimal.NewFromInt(int64(topUp.Amount))
 			dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 			quotaToAdd := int(dAmount.Mul(dQuotaPerUnit).IntPart())
+			// 应用赠送比例
+			bonusRate := operation_setting.GetBonusRate(topUp.Amount)
+			bonusQuota := 0
+			if bonusRate > 0 {
+				bonusQuota = int(float64(quotaToAdd) * bonusRate)
+				quotaToAdd += bonusQuota
+			}
 			err = model.IncreaseUserQuota(topUp.UserId, quotaToAdd, true)
 			if err != nil {
 				log.Printf("易支付回调更新用户失败: %v", topUp)
 				return
 			}
 			log.Printf("易支付回调更新用户成功 %v", topUp)
-			model.RecordLog(topUp.UserId, model.LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%f", logger.LogQuota(quotaToAdd), topUp.Money))
+			if bonusQuota > 0 {
+				model.RecordLog(topUp.UserId, model.LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，赠送: %v，总到账: %v，支付金额：%f", logger.LogQuota(quotaToAdd-bonusQuota), logger.LogQuota(bonusQuota), logger.LogQuota(quotaToAdd), topUp.Money))
+			} else {
+				model.RecordLog(topUp.UserId, model.LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%f", logger.LogQuota(quotaToAdd), topUp.Money))
+			}
 		}
 	} else {
 		log.Printf("易支付异常回调: %v", verifyInfo)

@@ -104,6 +104,7 @@ const TopUp = () => {
   const [topupInfo, setTopupInfo] = useState({
     amount_options: [],
     discount: {},
+    bonus: {},
   });
 
   const topUp = async () => {
@@ -390,6 +391,7 @@ const TopUp = () => {
         setTopupInfo({
           amount_options: data.amount_options || [],
           discount: data.discount || {},
+          bonus: data.bonus || {},
         });
 
         // 处理支付方式
@@ -695,6 +697,8 @@ const TopUp = () => {
         payMethods={payMethods}
         amountNumber={amount}
         discountRate={topupInfo?.discount?.[topUpCount] || 1.0}
+        bonusRate={topupInfo?.bonus?.[topUpCount] || 0}
+        topUpCountValue={topUpCount}
       />
 
       {/* 充值账单模态框 */}

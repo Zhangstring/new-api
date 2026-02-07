@@ -242,7 +242,13 @@ func updateConfigFromMap(config interface{}, configMap map[string]string) error 
 					continue
 				}
 			}
-		case reflect.Map, reflect.Slice, reflect.Struct:
+		case reflect.Map:
+			// Map 类型：先清空再反序列化，避免旧 key 残留
+			field.Set(reflect.MakeMap(field.Type()))
+			if err := json.Unmarshal([]byte(strValue), field.Addr().Interface()); err != nil {
+				continue
+			}
+		case reflect.Slice, reflect.Struct:
 			// 复杂类型使用JSON反序列化
 			err := json.Unmarshal([]byte(strValue), field.Addr().Interface())
 			if err != nil {

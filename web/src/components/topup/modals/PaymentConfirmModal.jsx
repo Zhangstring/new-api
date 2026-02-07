@@ -39,11 +39,17 @@ const PaymentConfirmModal = ({
   // 新增：用于显示折扣明细
   amountNumber,
   discountRate,
+  // 新增：用于显示赠送明细
+  bonusRate,
+  topUpCountValue,
 }) => {
   const hasDiscount =
     discountRate && discountRate > 0 && discountRate < 1 && amountNumber > 0;
   const originalAmount = hasDiscount ? amountNumber / discountRate : 0;
   const discountAmount = hasDiscount ? originalAmount - amountNumber : 0;
+  const hasBonus = bonusRate && bonusRate > 0 && topUpCountValue > 0;
+  const bonusAmount = hasBonus ? topUpCountValue * bonusRate : 0;
+  const totalCredit = hasBonus ? topUpCountValue + bonusAmount : topUpCountValue;
   return (
     <Modal
       title={
@@ -106,6 +112,26 @@ const PaymentConfirmModal = ({
                   </Text>
                   <Text className='text-emerald-600 dark:text-emerald-400'>
                     {`- ${discountAmount.toFixed(2)} ${t('元')}`}
+                  </Text>
+                </div>
+              </>
+            )}
+            {hasBonus && (
+              <>
+                <div className='flex justify-between items-center'>
+                  <Text className='text-slate-500 dark:text-slate-400'>
+                    {t('赠送比例')}：
+                  </Text>
+                  <Text className='text-emerald-600 dark:text-emerald-400'>
+                    +{(bonusRate * 100).toFixed(0)}%
+                  </Text>
+                </div>
+                <div className='flex justify-between items-center'>
+                  <Text strong className='text-slate-700 dark:text-slate-200'>
+                    {t('预计到账')}：
+                  </Text>
+                  <Text strong className='text-emerald-600 dark:text-emerald-400'>
+                    {renderQuotaWithAmount(totalCredit)}
                   </Text>
                 </div>
               </>

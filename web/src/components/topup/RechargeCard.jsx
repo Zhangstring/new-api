@@ -400,6 +400,11 @@ const RechargeCard = ({
                         const actualPay = discountedPrice;
                         const save = originalPrice - discountedPrice;
 
+                        // 赠送比例
+                        const bonusRate = topupInfo?.bonus?.[preset.value] || 0;
+                        const hasBonus = bonusRate > 0;
+                        const bonusAmount = hasBonus ? preset.value * bonusRate : 0;
+
                         // 根据当前货币类型换算显示金额和数量
                         const { symbol, rate, type } = getCurrencyConfig();
                         const statusStr = localStorage.getItem('status');
@@ -468,6 +473,11 @@ const RechargeCard = ({
                                     {t('折')}
                                   </Tag>
                                 )}
+                                {hasBonus && (
+                                  <Tag style={{ marginLeft: 4 }} color='lime'>
+                                    +{(bonusRate * 100).toFixed(0)}%
+                                  </Tag>
+                                )}
                               </Typography.Title>
                               <div
                                 style={{
@@ -477,10 +487,12 @@ const RechargeCard = ({
                                 }}
                               >
                                 {t('实付')} {symbol}
-                                {displayActualPay.toFixed(2)}，
-                                {hasDiscount
-                                  ? `${t('节省')} ${symbol}${displaySave.toFixed(2)}`
-                                  : `${t('节省')} ${symbol}0.00`}
+                                {displayActualPay.toFixed(2)}
+                                {hasBonus
+                                  ? `，${t('到账')} ${formatLargeNumber(displayValue + (type === 'USD' ? bonusAmount : type === 'CNY' ? bonusAmount * usdRate : bonusAmount * rate))} ${symbol}`
+                                  : hasDiscount
+                                    ? `，${t('节省')} ${symbol}${displaySave.toFixed(2)}`
+                                    : ''}
                               </div>
                             </div>
                           </Card>

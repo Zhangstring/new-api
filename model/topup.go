@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -86,6 +87,12 @@ func Recharge(referenceId string, customerId string) (err error) {
 		}
 
 		quota = topUp.Money * common.QuotaPerUnit
+		// 应用赠送比例
+		bonusRate := operation_setting.GetBonusRate(topUp.Amount)
+		if bonusRate > 0 {
+			bonus := quota * bonusRate
+			quota += bonus
+		}
 		err = tx.Model(&User{}).Where("id = ?", topUp.UserId).Updates(map[string]interface{}{"stripe_customer": customerId, "quota": gorm.Expr("quota + ?", quota)}).Error
 		if err != nil {
 			return err
@@ -99,7 +106,13 @@ func Recharge(referenceId string, customerId string) (err error) {
 		return errors.New("充值失败，请稍后重试")
 	}
 
-	RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%d", logger.FormatQuota(int(quota)), topUp.Amount))
+	bonusRateLog := operation_setting.GetBonusRate(topUp.Amount)
+	if bonusRateLog > 0 {
+		baseQuota := topUp.Money * common.QuotaPerUnit
+		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，赠送: %v，总到账: %v，支付金额：%d", logger.FormatQuota(int(baseQuota)), logger.FormatQuota(int(quota)-int(baseQuota)), logger.FormatQuota(int(quota)), topUp.Amount))
+	} else {
+		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%d", logger.FormatQuota(int(quota)), topUp.Amount))
+	}
 
 	return nil
 }
@@ -249,6 +262,7 @@ func ManualCompleteTopUp(tradeNo string) error {
 	var userId int
 	var quotaToAdd int
 	var payMoney float64
+	var topUpAmount int64
 
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		topUp := &TopUp{}
@@ -277,6 +291,13 @@ func ManualCompleteTopUp(tradeNo string) error {
 			dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 			quotaToAdd = int(dAmount.Mul(dQuotaPerUnit).IntPart())
 		}
+		// 应用赠送比例
+		bonusRate := operation_setting.GetBonusRate(topUp.Amount)
+		if bonusRate > 0 {
+			bonus := int(float64(quotaToAdd) * bonusRate)
+			quotaToAdd += bonus
+		}
+
 		if quotaToAdd <= 0 {
 			return errors.New("无效的充值额度")
 		}
@@ -295,6 +316,7 @@ func ManualCompleteTopUp(tradeNo string) error {
 
 		userId = topUp.UserId
 		payMoney = topUp.Money
+		topUpAmount = topUp.Amount
 		return nil
 	})
 
@@ -303,7 +325,14 @@ func ManualCompleteTopUp(tradeNo string) error {
 	}
 
 	// 事务外记录日志，避免阻塞
-	RecordLog(userId, LogTypeTopup, fmt.Sprintf("管理员补单成功，充值金额: %v，支付金额：%f", logger.FormatQuota(quotaToAdd), payMoney))
+	bonusRateManual := operation_setting.GetBonusRate(topUpAmount)
+	if bonusRateManual > 0 {
+		baseQuota := int(float64(quotaToAdd) / (1 + bonusRateManual))
+		bonusQuota := quotaToAdd - baseQuota
+		RecordLog(userId, LogTypeTopup, fmt.Sprintf("管理员补单成功，充值金额: %v，赠送: %v，总到账: %v，支付金额：%f", logger.FormatQuota(baseQuota), logger.FormatQuota(bonusQuota), logger.FormatQuota(quotaToAdd), payMoney))
+	} else {
+		RecordLog(userId, LogTypeTopup, fmt.Sprintf("管理员补单成功，充值金额: %v，支付金额：%f", logger.FormatQuota(quotaToAdd), payMoney))
+	}
 	return nil
 }
 func RechargeCreem(referenceId string, customerEmail string, customerName string) (err error) {
@@ -338,6 +367,12 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 
 		// Creem 直接使用 Amount 作为充值额度（整数）
 		quota = topUp.Amount
+		// 应用赠送比例
+		bonusRate := operation_setting.GetBonusRate(topUp.Amount)
+		if bonusRate > 0 {
+			bonus := int64(float64(quota) * bonusRate)
+			quota += bonus
+		}
 
 		// 构建更新字段，优先使用邮箱，如果邮箱为空则使用用户名
 		updateFields := map[string]interface{}{
@@ -372,7 +407,13 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 		return errors.New("充值失败，请稍后重试")
 	}
 
-	RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用Creem充值成功，充值额度: %v，支付金额：%.2f", quota, topUp.Money))
+	bonusRateCreem := operation_setting.GetBonusRate(topUp.Amount)
+	if bonusRateCreem > 0 {
+		baseQuota := topUp.Amount
+		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用Creem充值成功，充值额度: %v，赠送: %v，总到账: %v，支付金额：%.2f", baseQuota, quota-baseQuota, quota, topUp.Money))
+	} else {
+		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("使用Creem充值成功，充值额度: %v，支付金额：%.2f", quota, topUp.Money))
+	}
 
 	return nil
 }

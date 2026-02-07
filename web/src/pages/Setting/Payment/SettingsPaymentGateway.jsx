@@ -43,6 +43,7 @@ export default function SettingsPaymentGateway(props) {
     PayMethods: '',
     AmountOptions: '',
     AmountDiscount: '',
+    AmountBonus: '',
   });
   const [originInputs, setOriginInputs] = useState({});
   const formApiRef = useRef(null);
@@ -66,6 +67,7 @@ export default function SettingsPaymentGateway(props) {
         PayMethods: props.options.PayMethods || '',
         AmountOptions: props.options.AmountOptions || '',
         AmountDiscount: props.options.AmountDiscount || '',
+        AmountBonus: props.options.AmountBonus || '',
       };
 
       // 美化 JSON 展示
@@ -82,6 +84,15 @@ export default function SettingsPaymentGateway(props) {
         if (currentInputs.AmountDiscount) {
           currentInputs.AmountDiscount = JSON.stringify(
             JSON.parse(currentInputs.AmountDiscount),
+            null,
+            2,
+          );
+        }
+      } catch {}
+      try {
+        if (currentInputs.AmountBonus) {
+          currentInputs.AmountBonus = JSON.stringify(
+            JSON.parse(currentInputs.AmountBonus),
             null,
             2,
           );
@@ -138,6 +149,16 @@ export default function SettingsPaymentGateway(props) {
       }
     }
 
+    if (
+      originInputs['AmountBonus'] !== inputs.AmountBonus &&
+      inputs.AmountBonus.trim() !== ''
+    ) {
+      if (!verifyJSON(inputs.AmountBonus)) {
+        showError(t('充值赠送比例配置不是合法的 JSON 对象'));
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const options = [
@@ -178,6 +199,12 @@ export default function SettingsPaymentGateway(props) {
         options.push({
           key: 'payment_setting.amount_discount',
           value: inputs.AmountDiscount,
+        });
+      }
+      if (originInputs['AmountBonus'] !== inputs.AmountBonus) {
+        options.push({
+          key: 'payment_setting.amount_bonus',
+          value: inputs.AmountBonus,
         });
       }
 
@@ -319,6 +346,25 @@ export default function SettingsPaymentGateway(props) {
                 autosize
                 extraText={t(
                   '设置不同充值金额对应的折扣，键为充值金额，值为折扣率，例如：{"100": 0.95, "200": 0.9, "500": 0.85}',
+                )}
+              />
+            </Col>
+          </Row>
+
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col span={24}>
+              <Form.TextArea
+                field='AmountBonus'
+                label={t('充值赠送比例配置')}
+                placeholder={t(
+                  '为一个 JSON 对象，例如：{"2000": 0.2, "3000": 0.3}',
+                )}
+                autosize
+                extraText={t(
+                  '设置不同充值金额的赠送比例，键为充值金额，值为赠送率。例如 {"2000": 0.2} 表示充值2000赠送20%，到账2400',
                 )}
               />
             </Col>
