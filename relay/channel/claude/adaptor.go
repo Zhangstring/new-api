@@ -24,7 +24,43 @@ func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dt
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
+	// 兼容处理：将 messages 中的 system 角色消息提取到顶层 system 字段
+	extractSystemFromMessages(request)
 	return request, nil
+}
+
+// extractSystemFromMessages 从 messages 中提取 role="system" 的消息，
+// 合并到顶层 System 字段，兼容客户将 system 放在 messages 数组中的写法
+func extractSystemFromMessages(request *dto.ClaudeRequest) {
+	if request == nil || len(request.Messages) == 0 {
+		return
+	}
+
+	var systemMessages []dto.ClaudeMediaMessage
+	var filteredMessages []dto.ClaudeMessage
+
+	for _, msg := range request.Messages {
+		if msg.Role == "system" {
+			content := msg.GetStringContent()
+			if content != "" {
+				systemMessages = append(systemMessages, dto.ClaudeMediaMessage{
+					Type: "text",
+					Text: &content,
+				})
+			}
+		} else {
+			filteredMessages = append(filteredMessages, msg)
+		}
+	}
+
+	if len(systemMessages) == 0 {
+		return
+	}
+
+	// 将已有的顶层 system 内容放在前面，messages 中提取的追加在后面
+	existingSystem := request.ParseSystem()
+	request.System = append(existingSystem, systemMessages...)
+	request.Messages = filteredMessages
 }
 
 func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
