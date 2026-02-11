@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
+	claudeChan "github.com/QuantumNous/new-api/relay/channel/claude"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/service"
@@ -85,6 +86,11 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		info.UpstreamModelName = request.Model
 	}
 
+	// Claude Code 伪装模式：工具已有 mcp_ 前缀则视为真实 CLI，跳过伪装
+	if info.ChannelOtherSettings.ClaudeCodeMode {
+		info.IsRealClaudeCode = claudeChan.ToolsAlreadyHaveMcpPrefix(request)
+	}
+
 	if info.ChannelSetting.SystemPrompt != "" {
 		if request.System == nil {
 			request.SetStringSystem(info.ChannelSetting.SystemPrompt)
@@ -108,6 +114,11 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 				}
 			}
 		}
+	}
+
+	// Claude Code 伪装模式：非真实 CLI 请求时为工具名添加 mcp_ 前缀
+	if info.ChannelOtherSettings.ClaudeCodeMode && !info.IsRealClaudeCode {
+		claudeChan.ApplyMcpToolPrefix(request)
 	}
 
 	if !model_setting.GetGlobalSettings().PassThroughRequestEnabled &&

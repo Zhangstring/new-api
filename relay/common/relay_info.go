@@ -139,6 +139,7 @@ type RelayInfo struct {
 	SubscriptionAmountTotal               int64
 	SubscriptionAmountUsedAfterPreConsume int64
 	IsClaudeBetaQuery                     bool // /v1/messages?beta=true
+	IsRealClaudeCode                      bool // Claude Code 系统提示命中（用于伪装决策）
 	IsChannelTest                         bool // channel test request
 
 	PriceData types.PriceData

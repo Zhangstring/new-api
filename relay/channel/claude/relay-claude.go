@@ -719,9 +719,17 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 				data = patchClaudeMessageDeltaUsageData(data, buildMessageDeltaPatchUsage(&claudeResponse, claudeInfo))
 			}
 		}
+		// Claude Code 伪装模式：去除响应中工具名的 mcp_ 前缀
+		if info.ChannelOtherSettings.ClaudeCodeMode && !info.IsRealClaudeCode {
+			data = StripMcpPrefixFromData(data)
+		}
 		helper.ClaudeChunkData(c, claudeResponse, data)
 	} else if info.RelayFormat == types.RelayFormatOpenAI {
 		response := StreamResponseClaude2OpenAI(&claudeResponse)
+		// Claude Code 伪装模式：去除响应中工具名的 mcp_ 前缀
+		if info.ChannelOtherSettings.ClaudeCodeMode && !info.IsRealClaudeCode {
+			StripMcpPrefixFromStreamResponse(response)
+		}
 
 		if !FormatClaudeResponseInfo(&claudeResponse, response, claudeInfo) {
 			return nil
@@ -815,8 +823,16 @@ func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		if err != nil {
 			return types.NewError(err, types.ErrorCodeBadResponseBody)
 		}
+		// Claude Code 伪装模式：去除响应中工具名的 mcp_ 前缀
+		if info.ChannelOtherSettings.ClaudeCodeMode && !info.IsRealClaudeCode {
+			responseData = StripMcpPrefixFromBytes(responseData)
+		}
 	case types.RelayFormatClaude:
 		responseData = data
+		// Claude Code 伪装模式：去除响应中工具名的 mcp_ 前缀
+		if info.ChannelOtherSettings.ClaudeCodeMode && !info.IsRealClaudeCode {
+			responseData = StripMcpPrefixFromBytes(responseData)
+		}
 	}
 
 	if claudeResponse.Usage != nil && claudeResponse.Usage.ServerToolUse != nil && claudeResponse.Usage.ServerToolUse.WebSearchRequests > 0 {

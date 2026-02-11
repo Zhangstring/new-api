@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	claudeChan "github.com/QuantumNous/new-api/relay/channel/claude"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -113,6 +114,18 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		if err != nil {
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
+
+		// Claude Code 伪装模式：OpenAI 格式转 Claude 格式后添加 mcp_ 前缀
+		if info.ChannelOtherSettings.ClaudeCodeMode && info.ApiType == constant.APITypeAnthropic {
+			if claudeReq, ok := convertedRequest.(*dto.ClaudeRequest); ok {
+				if !claudeChan.ToolsAlreadyHaveMcpPrefix(claudeReq) {
+					claudeChan.ApplyMcpToolPrefix(claudeReq)
+				} else {
+					info.IsRealClaudeCode = true
+				}
+			}
+		}
+
 		relaycommon.AppendRequestConversionFromRequest(info, convertedRequest)
 
 		if info.ChannelSetting.SystemPrompt != "" {

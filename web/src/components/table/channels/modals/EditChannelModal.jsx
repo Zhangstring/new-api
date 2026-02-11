@@ -635,6 +635,7 @@ const EditChannelModal = (props) => {
           data.allow_safety_identifier =
             parsedSettings.allow_safety_identifier || false;
           data.claude_beta_query = parsedSettings.claude_beta_query || false;
+          data.claude_code_mode = parsedSettings.claude_code_mode || false;
         } catch (error) {
           console.error('解析其他设置失败:', error);
           data.azure_responses_version = '';
@@ -646,6 +647,7 @@ const EditChannelModal = (props) => {
           data.disable_store = false;
           data.allow_safety_identifier = false;
           data.claude_beta_query = false;
+          data.claude_code_mode = false;
         }
       } else {
         // 兼容历史数据：老渠道没有 settings 时，默认按 json 展示
@@ -656,6 +658,7 @@ const EditChannelModal = (props) => {
         data.disable_store = false;
         data.allow_safety_identifier = false;
         data.claude_beta_query = false;
+        data.claude_code_mode = false;
       }
 
       if (
@@ -1400,6 +1403,7 @@ const EditChannelModal = (props) => {
       }
       if (localInputs.type === 14) {
         settings.claude_beta_query = localInputs.claude_beta_query === true;
+        settings.claude_code_mode = localInputs.claude_code_mode === true;
       }
     }
 
@@ -1422,6 +1426,7 @@ const EditChannelModal = (props) => {
     delete localInputs.disable_store;
     delete localInputs.allow_safety_identifier;
     delete localInputs.claude_beta_query;
+    delete localInputs.claude_code_mode;
 
     let res;
     localInputs.auto_ban = localInputs.auto_ban ? 1 : 0;
@@ -3338,6 +3343,24 @@ const EditChannelModal = (props) => {
                         }
                         extraText={t(
                           '开启后，该渠道请求 Claude 时将强制追加 ?beta=true（无需客户端手动传参）',
+                        )}
+                      />
+                    )}
+
+                    {inputs.type === 14 && (
+                      <Form.Switch
+                        field='claude_code_mode'
+                        label={t('Claude Code 伪装模式')}
+                        checkedText={t('开')}
+                        uncheckedText={t('关')}
+                        onChange={(value) =>
+                          handleChannelOtherSettingsChange(
+                            'claude_code_mode',
+                            value,
+                          )
+                        }
+                        extraText={t(
+                          '开启后，非真实 Claude Code CLI 的请求将自动伪装为 Claude Code 客户端（注入系统提示 + 覆盖 UA/Stainless 头）',
                         )}
                       />
                     )}
