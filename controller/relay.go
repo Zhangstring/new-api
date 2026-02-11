@@ -193,6 +193,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		}
 
 		addUsedChannel(c, channel.Id)
+		retryParam.ExcludeChannelIds = append(retryParam.ExcludeChannelIds, channel.Id)
 		requestBody, bodyErr := common.GetRequestBody(c)
 		if bodyErr != nil {
 			// Ensure consistent 413 for oversized bodies even when error occurs later (e.g., retry path)
@@ -464,10 +465,11 @@ func RelayTask(c *gin.Context) {
 		retryTimes = 0
 	}
 	retryParam := &service.RetryParam{
-		Ctx:        c,
-		TokenGroup: relayInfo.TokenGroup,
-		ModelName:  relayInfo.OriginModelName,
-		Retry:      common.GetPointer(0),
+		Ctx:               c,
+		TokenGroup:        relayInfo.TokenGroup,
+		ModelName:         relayInfo.OriginModelName,
+		Retry:             common.GetPointer(0),
+		ExcludeChannelIds: []int{channelId},
 	}
 	for ; shouldRetryTaskRelay(c, channelId, taskErr, retryTimes) && retryParam.GetRetry() < retryTimes; retryParam.IncreaseRetry() {
 		channel, newAPIError := getChannel(c, relayInfo, retryParam)
@@ -477,6 +479,7 @@ func RelayTask(c *gin.Context) {
 			break
 		}
 		channelId = channel.Id
+		retryParam.ExcludeChannelIds = append(retryParam.ExcludeChannelIds, channelId)
 		useChannel := c.GetStringSlice("use_channel")
 		useChannel = append(useChannel, fmt.Sprintf("%d", channelId))
 		c.Set("use_channel", useChannel)

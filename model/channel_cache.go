@@ -93,10 +93,10 @@ func SyncChannelCache(frequency int) {
 	}
 }
 
-func GetRandomSatisfiedChannel(group string, model string, retry int) (*Channel, error) {
+func GetRandomSatisfiedChannel(group string, model string, retry int, excludeIds []int) (*Channel, error) {
 	// if memory cache is disabled, get channel directly from database
 	if !common.MemoryCacheEnabled {
-		return GetChannel(group, model, retry)
+		return GetChannel(group, model, retry, excludeIds)
 	}
 
 	channelSyncLock.RLock()
@@ -157,6 +157,27 @@ func GetRandomSatisfiedChannel(group string, model string, retry int) (*Channel,
 
 	if len(targetChannels) == 0 {
 		return nil, errors.New(fmt.Sprintf("no channel found, group: %s, model: %s, priority: %d", group, model, targetPriority))
+	}
+
+	// 排除已使用的渠道，确保重试时选到不同的渠道
+	if len(excludeIds) > 0 && len(targetChannels) > 1 {
+		excludeSet := make(map[int]bool, len(excludeIds))
+		for _, id := range excludeIds {
+			excludeSet[id] = true
+		}
+		var filteredChannels []*Channel
+		var filteredSumWeight int
+		for _, ch := range targetChannels {
+			if !excludeSet[ch.Id] {
+				filteredChannels = append(filteredChannels, ch)
+				filteredSumWeight += ch.GetWeight()
+			}
+		}
+		// 排除后仍有候选渠道时才应用排除结果，否则回退到原始列表
+		if len(filteredChannels) > 0 {
+			targetChannels = filteredChannels
+			sumWeight = filteredSumWeight
+		}
 	}
 
 	// smoothing factor and adjustment
