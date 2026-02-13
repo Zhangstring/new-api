@@ -214,6 +214,28 @@ type ClaudeRequest struct {
 	ServiceTier string `json:"service_tier,omitempty"`
 }
 
+// NormalizeWebSearchTools 修正 web_search 类型工具的 name 字段
+// 部分客户端会错误地将 name 设置为带日期后缀的值（如 "web_search_20250305"），
+// 而 Anthropic API 要求该类型工具的 name 必须为 "web_search"
+func (c *ClaudeRequest) NormalizeWebSearchTools() {
+	tools, ok := c.Tools.([]interface{})
+	if !ok || len(tools) == 0 {
+		return
+	}
+	for _, tool := range tools {
+		t, ok := tool.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		toolType, _ := t["type"].(string)
+		if strings.HasPrefix(toolType, "web_search") && toolType != "web_search" {
+			if name, _ := t["name"].(string); name != "web_search" {
+				t["name"] = "web_search"
+			}
+		}
+	}
+}
+
 // createClaudeFileSource 根据数据内容创建正确类型的 FileSource
 func createClaudeFileSource(data string) *types.FileSource {
 	if strings.HasPrefix(data, "http://") || strings.HasPrefix(data, "https://") {
