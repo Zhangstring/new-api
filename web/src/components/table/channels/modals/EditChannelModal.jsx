@@ -3360,7 +3360,7 @@ const EditChannelModal = (props) => {
                           )
                         }
                         extraText={t(
-                          '开启后，非真实 Claude Code CLI 的请求将自动伪装为 Claude Code 客户端（注入系统提示 + 覆盖 UA/Stainless 头）',
+                          '开启后，非 Claude Code CLI 的请求会自动为工具名添加 mcp_ 前缀（响应时自动去除），以绕过部分凭证校验',
                         )}
                       />
                     )}
