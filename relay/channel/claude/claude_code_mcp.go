@@ -12,6 +12,17 @@ const mcpToolPrefix = "mcp_"
 // mcpNameRegex 匹配 JSON 中 "name":"mcp_xxx" 模式，用于响应中去除前缀
 var mcpNameRegex = regexp.MustCompile(`"name"\s*:\s*"mcp_([^"]+)"`)
 
+// isServerSideTool 判断工具是否为 Anthropic 服务端内置工具（如 web_search、text_editor 等）
+// 内置工具有特定的 type 字段（如 "web_search_20250305"），其 name 由 API 固定不能修改
+// 自定义工具没有 type 字段或 type 为 "custom"
+func isServerSideTool(t map[string]interface{}) bool {
+	toolType, ok := t["type"].(string)
+	if !ok || toolType == "" || toolType == "custom" {
+		return false
+	}
+	return true
+}
+
 // ApplyMcpToolPrefix 为请求中的工具名添加 mcp_ 前缀
 // 处理三个位置：工具定义、消息中的 tool_use 块、tool_choice 中的 name
 func ApplyMcpToolPrefix(request *dto.ClaudeRequest) {
@@ -20,10 +31,14 @@ func ApplyMcpToolPrefix(request *dto.ClaudeRequest) {
 	}
 
 	// 1. 工具定义：tools[].name
+	// 跳过服务端内置工具（如 web_search、text_editor 等），它们的 name 由 API 固定，不能修改
 	if tools, ok := request.Tools.([]interface{}); ok {
 		for _, tool := range tools {
 			switch t := tool.(type) {
 			case map[string]interface{}:
+				if isServerSideTool(t) {
+					continue
+				}
 				if name, ok := t["name"].(string); ok && name != "" && !strings.HasPrefix(name, mcpToolPrefix) {
 					t["name"] = mcpToolPrefix + name
 				}
