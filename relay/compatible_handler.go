@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -199,6 +200,11 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
+		// 1M context disabled: return 400 + skip retry (not a transient error)
+		var context1mErr *claudeChan.Context1mDisabledError
+		if errors.As(err, &context1mErr) {
+			return types.NewErrorWithStatusCode(context1mErr, types.ErrorCodeDoRequestFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 

@@ -35,6 +35,7 @@ type ChannelOtherSettings struct {
 	AllowIncludeObfuscation bool          `json:"allow_include_obfuscation,omitempty"` // 是否允许 stream_options.include_obfuscation 透传（默认过滤以避免关闭流混淆保护）
 	AwsKeyType              AwsKeyType    `json:"aws_key_type,omitempty"`
 	ClaudeCodeMode          bool          `json:"claude_code_mode,omitempty"`          // Claude Code 伪装模式
+	Context1mPreference     string        `json:"context_1m_preference,omitempty"`     // 1M 上下文窗口：inherit(默认)/force_enable/disabled
 }
 
 func (s *ChannelOtherSettings) IsOpenRouterEnterprise() bool {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/relay/channel"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -84,13 +85,23 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	return baseURL, nil
 }
 
-func CommonClaudeHeadersOperation(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) {
-	// common headers operation
+func CommonClaudeHeadersOperation(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) error {
 	anthropicBeta := c.Request.Header.Get("anthropic-beta")
+
+	// 1M context window preference: only applies to Claude direct channels (type=14)
+	if info.ChannelType == constant.ChannelTypeAnthropic {
+		processedBeta, err := ApplyContext1mPreference(c, anthropicBeta)
+		if err != nil {
+			return err
+		}
+		anthropicBeta = processedBeta
+	}
+
 	if anthropicBeta != "" {
 		req.Set("anthropic-beta", anthropicBeta)
 	}
 	model_setting.GetClaudeSettings().WriteHeaders(info.OriginModelName, req)
+	return nil
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) error {
@@ -101,7 +112,9 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 		anthropicVersion = "2023-06-01"
 	}
 	req.Set("anthropic-version", anthropicVersion)
-	CommonClaudeHeadersOperation(c, req, info)
+	if err := CommonClaudeHeadersOperation(c, req, info); err != nil {
+		return err
+	}
 	return nil
 }
 

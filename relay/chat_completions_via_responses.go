@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/relay/channel"
+	claudeChan "github.com/QuantumNous/new-api/relay/channel/claude"
 	openaichannel "github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
@@ -127,6 +129,11 @@ func chatCompletionsViaResponses(c *gin.Context, info *relaycommon.RelayInfo, ad
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, bytes.NewBuffer(jsonData))
 	if err != nil {
+		// 1M context disabled: return 400 + skip retry (not a transient error)
+		var context1mErr *claudeChan.Context1mDisabledError
+		if errors.As(err, &context1mErr) {
+			return nil, types.NewErrorWithStatusCode(context1mErr, types.ErrorCodeDoRequestFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
 		return nil, types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 	if resp == nil {

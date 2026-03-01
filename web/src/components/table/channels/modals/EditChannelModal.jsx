@@ -203,6 +203,7 @@ const EditChannelModal = (props) => {
     allow_include_obfuscation: false,
     allow_inference_geo: false,
     claude_beta_query: false,
+    context_1m_preference: 'inherit',
   };
   const [batch, setBatch] = useState(false);
   const [multiToSingle, setMultiToSingle] = useState(false);
@@ -851,6 +852,7 @@ const EditChannelModal = (props) => {
             parsedSettings.allow_inference_geo || false;
           data.claude_beta_query = parsedSettings.claude_beta_query || false;
           data.claude_code_mode = parsedSettings.claude_code_mode || false;
+          data.context_1m_preference = parsedSettings.context_1m_preference || 'inherit';
         } catch (error) {
           console.error('解析其他设置失败:', error);
           data.azure_responses_version = '';
@@ -865,6 +867,7 @@ const EditChannelModal = (props) => {
           data.allow_inference_geo = false;
           data.claude_beta_query = false;
           data.claude_code_mode = false;
+          data.context_1m_preference = 'inherit';
         }
       } else {
         // 兼容历史数据：老渠道没有 settings 时，默认按 json 展示
@@ -878,6 +881,7 @@ const EditChannelModal = (props) => {
         data.allow_inference_geo = false;
         data.claude_beta_query = false;
         data.claude_code_mode = false;
+        data.context_1m_preference = 'inherit';
       }
 
       if (
@@ -1678,6 +1682,7 @@ const EditChannelModal = (props) => {
         settings.allow_inference_geo = localInputs.allow_inference_geo === true;
         settings.claude_beta_query = localInputs.claude_beta_query === true;
         settings.claude_code_mode = localInputs.claude_code_mode === true;
+        settings.context_1m_preference = localInputs.context_1m_preference || 'inherit';
       }
     }
 
@@ -1703,6 +1708,7 @@ const EditChannelModal = (props) => {
     delete localInputs.allow_inference_geo;
     delete localInputs.claude_beta_query;
     delete localInputs.claude_code_mode;
+    delete localInputs.context_1m_preference;
 
     let res;
     localInputs.auto_ban = localInputs.auto_ban ? 1 : 0;
@@ -3677,6 +3683,32 @@ const EditChannelModal = (props) => {
                           '开启后，非 Claude Code CLI 的请求会自动为工具名添加 mcp_ 前缀（响应时自动去除），以绕过部分凭证校验',
                         )}
                       />
+                    )}
+
+                    {inputs.type === 14 && (
+                      <Form.Select
+                        field='context_1m_preference'
+                        label={t('1M 上下文窗口')}
+                        onChange={(value) =>
+                          handleChannelOtherSettingsChange(
+                            'context_1m_preference',
+                            value,
+                          )
+                        }
+                        extraText={t(
+                          '控制 1M 上下文窗口（仅 Sonnet 模型）。强制启用将自动注入 context-1m beta header；禁用后客户端请求将返回错误',
+                        )}
+                      >
+                        <Form.Select.Option value='inherit'>
+                          {t('跟随客户端')}
+                        </Form.Select.Option>
+                        <Form.Select.Option value='force_enable'>
+                          {t('强制启用')}
+                        </Form.Select.Option>
+                        <Form.Select.Option value='disabled'>
+                          {t('禁用')}
+                        </Form.Select.Option>
+                      </Form.Select>
                     )}
 
                     {inputs.type === 1 && (

@@ -105,7 +105,9 @@ func doAwsClientRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor,
 
 	// init empty request.header
 	requestHeader := http.Header{}
-	a.SetupRequestHeader(c, &requestHeader, info)
+	if err := a.SetupRequestHeader(c, &requestHeader, info); err != nil {
+		return nil, err
+	}
 
 	if isNovaModel(awsModelId) {
 		var novaReq *NovaRequest
