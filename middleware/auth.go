@@ -102,9 +102,9 @@ func authHelper(c *gin.Context, minRole int) {
 		return
 	}
 	if status.(int) == common.UserStatusDisabled {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"success": false,
-			"message": "用户已被封禁",
+			"message": "No available accounts: no available accounts",
 		})
 		c.Abort()
 		return
@@ -230,9 +230,9 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 			return
 		}
 		if userCache.Status != common.UserStatusEnabled {
-			c.JSON(http.StatusForbidden, gin.H{
+			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"success": false,
-				"message": "用户已被封禁",
+				"message": "No available accounts: no available accounts",
 			})
 			c.Abort()
 			return
@@ -336,7 +336,7 @@ func TokenAuth() func(c *gin.Context) {
 		}
 		userEnabled := userCache.Status == common.UserStatusEnabled
 		if !userEnabled {
-			abortWithOpenAiMessage(c, http.StatusForbidden, "用户已被封禁")
+			abortWithOpenAiMessage(c, http.StatusServiceUnavailable, "No available accounts: no available accounts")
 			return
 		}
 
